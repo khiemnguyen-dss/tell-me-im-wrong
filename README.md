@@ -1,59 +1,92 @@
 # tell-me-im-wrong
 
-Một agent skill để **AI nói cho bạn biết code bạn sai chỗ nào** — theo diff của một PR, một
-branch hoặc một commit range, trong repo thật.
-
-Cài một lệnh, dùng được ở Claude Code, Cursor, Codex, Gemini CLI, OpenCode, GitHub Copilot và
-~70 agent khác.
+Agent skill để AI **nói cho bạn biết code sai chỗ nào** — theo diff của một PR, branch hoặc
+commit range, trong repo thật. Dùng được ở Claude Code, Cursor, Codex, Gemini CLI, OpenCode,
+GitHub Copilot và ~70 agent khác.
 
 ```sh
 npx skills add khiemnguyen-dss/tell-me-im-wrong
 ```
 
-## Nó giải quyết vấn đề gì
+Không dùng `npx` cũng cài được — xem [Cài](#cài).
 
-Bảo AI "review giúp PR này" thì thường nhận về một danh sách dài và vô dụng: lỗi có sẵn từ
-trước, nitpick về style, đề nghị refactor code đang chạy đúng, và những thứ linter đã bắt từ
-2 giây trước. Dev đọc một lần thấy nhiễu thì lần sau bỏ qua luôn — kể cả Blocker nằm trong đó.
+## Vấn đề
 
-Skill này ép quy trình review đi qua ba chốt:
+Bảo AI "review giúp PR này" thường nhận về danh sách dài và vô dụng: lỗi có sẵn từ trước,
+nitpick style, đề nghị refactor code đang chạy đúng, thứ linter đã bắt từ 2 giây trước. Dev
+thấy nhiễu một lần thì lần sau bỏ qua luôn — kể cả Blocker nằm trong đó.
 
-1. **Chạy gate của repo trước.** Lint, typecheck, test, build — cái nào *thật sự chạy được*.
-   Máy bắt được rồi thì model không báo lại. Repo không có gate thì nói thẳng trong báo cáo là
-   vòng review đang gánh thay.
-2. **7 lens độc lập**, mỗi lens hỏi một câu khác nhau về cùng đoạn diff: quy ước repo, bug lộ
-   ngay trên diff, ngữ cảnh rộng hơn diff, lịch sử git của chính đoạn code đó, rule theo stack,
-   phạm vi PR, test. Review một lượt từ trên xuống bằng một góc nhìn thì luôn sót.
-3. **Confidence gate 0–100, bỏ hết dưới 80.** Mỗi finding phải viết được kịch bản lỗi cụ thể
-   ("user làm X → hệ thống Y → hậu quả Z") và chỉ được ra `file:dòng` đã thật sự đọc. Không
-   viết nổi kịch bản thì đó là ý kiến về phong cách, không phải bug. Kèm sẵn danh sách false
-   positive phải bỏ thẳng.
+Skill ép review đi qua ba chốt:
 
-Đầu ra là **một file Markdown**: gate nào pass/fail, từng finding kèm `file:dòng` + mức độ +
-kịch bản lỗi + đề xuất, và một khuyến nghị rõ ràng — merge được / phải sửa trước / cần kiểm
-chứng trên app thật.
+1. **Chạy gate của repo trước** — lint/typecheck/test/build, cái nào *thật sự chạy được*. Máy
+   bắt rồi thì model không báo lại. Repo không có gate thì nói thẳng trong báo cáo.
+2. **7 lens độc lập** — quy ước repo, bug trên diff, ngữ cảnh rộng hơn diff, lịch sử git của
+   đoạn code đó, rule theo stack, phạm vi PR, test.
+3. **Confidence gate 0–100, bỏ hết dưới 80** — mỗi finding phải viết được kịch bản lỗi cụ thể
+   và chỉ ra `file:dòng` đã thật sự đọc. Không viết nổi thì đó là ý kiến, không phải bug.
 
-**Skill không tự sửa code.** Nó đọc và báo cáo, trừ khi bạn yêu cầu rõ sau khi đã đọc báo cáo.
+Đầu ra: một file Markdown — gate pass/fail, từng finding kèm `file:dòng` + mức độ + kịch bản
+lỗi + đề xuất, và khuyến nghị merge được hay chưa. **Skill không tự sửa code.**
 
 ## Cài
 
+### Cách 1 — Skills CLI (khuyến nghị)
+
+Cần **Node.js ≥ 22.20** (`npx` đi kèm Node; kiểm bằng `node -v`). Chưa có thì
+`brew install node` hoặc `nvm install 22`.
+
 ```sh
-# cài cho project hiện tại
-npx skills add khiemnguyen-dss/tell-me-im-wrong
-
-# cài global, dùng cho mọi project
-npx skills add khiemnguyen-dss/tell-me-im-wrong -g
-
-# chỉ cài cho một số agent
+npx skills add khiemnguyen-dss/tell-me-im-wrong          # cho project hiện tại
+npx skills add khiemnguyen-dss/tell-me-im-wrong -g       # global
 npx skills add khiemnguyen-dss/tell-me-im-wrong -a claude-code -a cursor
 ```
 
-CLI tự dò xem máy bạn đang có agent nào; không dò được thì nó hỏi. Mặc định cài bằng symlink
-về một bản duy nhất, nên update một lần là mọi agent cùng nhận.
+CLI tự dò agent đang có trên máy, cài bằng symlink nên update một lần là mọi agent cùng nhận.
+
+### Cách 2 — Tải thẳng, không cần Node
+
+```sh
+mkdir -p ~/.claude/skills
+curl -sL https://github.com/khiemnguyen-dss/tell-me-im-wrong/archive/refs/heads/main.tar.gz \
+  | tar -xz -C ~/.claude/skills --strip-components=2 tell-me-im-wrong-main/skills
+```
+
+Đổi `~/.claude/skills` theo agent bạn dùng:
+
+| Agent | Global | Trong project |
+|---|---|---|
+| Claude Code | `~/.claude/skills/` | `.claude/skills/` |
+| Cursor | `~/.cursor/skills/` | `.agents/skills/` |
+| Codex | `~/.codex/skills/` | `.agents/skills/` |
+| Gemini CLI | `~/.gemini/skills/` | `.agents/skills/` |
+| GitHub Copilot | `~/.copilot/skills/` | `.agents/skills/` |
+| OpenCode | `~/.config/opencode/skills/` | `.agents/skills/` |
+| Windsurf | `~/.codeium/windsurf/skills/` | `.windsurf/skills/` |
+
+Agent khác: [bảng đầy đủ](https://github.com/vercel-labs/skills#supported-agents).
+
+### Cách 3 — Clone, update bằng `git pull`
+
+```sh
+git clone https://github.com/khiemnguyen-dss/tell-me-im-wrong.git ~/src/tell-me-im-wrong
+ln -s ~/src/tell-me-im-wrong/skills/tell-me-im-wrong ~/.claude/skills/tell-me-im-wrong
+```
+
+Hợp với ai muốn tự sửa rule mà vẫn `git pull` được.
+
+### Cách 4 — Bảo agent tự cài
+
+```
+Cài skill từ https://github.com/khiemnguyen-dss/tell-me-im-wrong vào ~/.claude/skills,
+giữ nguyên tên thư mục tell-me-im-wrong.
+```
+
+### Kiểm tra
+
+`ls ~/.claude/skills/tell-me-im-wrong/SKILL.md` (cách 2–4) hoặc `npx skills ls` (cách 1).
+Claude Code cần mở phiên mới mới thấy skill vừa cài.
 
 ## Dùng
-
-Nói với agent bằng ngôn ngữ bình thường:
 
 ```
 review PR #42
@@ -61,20 +94,8 @@ self review nhánh feat/ABC-123 trước khi mở PR
 review giúp diff giữa develop và HEAD
 ```
 
-Skill tự kích hoạt. Báo cáo được viết bằng **ngôn ngữ bạn đang dùng để nói chuyện**, không cứng
-theo ngôn ngữ của skill.
-
-Chạy lần 2 sau khi đã sửa: đưa lại báo cáo cũ, skill chỉ trả lời ba câu — cũ nào đã fix, cũ nào
-chưa, có gì mới.
-
-## Agent hỗ trợ
-
-Mọi agent mà [Skills CLI](https://github.com/vercel-labs/skills) hỗ trợ (79 agent tại thời
-điểm viết), trong đó có: Claude Code, Cursor, Codex, Gemini CLI, OpenCode, GitHub Copilot,
-Windsurf, Cline, Roo Code, Kilo Code, Amp, Zed, Antigravity, Kiro CLI.
-
-Skill này là Markdown thuần — không hook, không script, không dependency — nên không có tính
-năng nào bị mất khi đổi agent.
+Báo cáo viết bằng **ngôn ngữ bạn đang nói chuyện**. Chạy lần 2: đưa lại báo cáo cũ, skill chỉ
+trả lời ba câu — cũ nào đã fix, cũ nào chưa, có gì mới.
 
 ## Trong repo có gì
 
@@ -83,51 +104,45 @@ skills/tell-me-im-wrong/
 ├── SKILL.md                              # quy trình 8 bước — file agent thực sự đọc
 └── references/
     ├── review-passes.md                  # 7 lens + thang confidence + danh sách false positive
-    ├── severity-and-report.md            # mức độ, định dạng báo cáo, cách comment lên PR
+    ├── severity-and-report.md            # mức độ, định dạng báo cáo, comment lên PR
     ├── react-ts.md                       # React/TS — phần linter không bắt được
-    ├── forge-and-ads.md                  # Atlassian Forge + Atlassian Design System
-    └── project-rules.template.md         # mẫu để tự viết tầng quy ước riêng cho repo bạn
+    ├── forge-and-ads.md                  # Atlassian Forge + Design System
+    └── project-rules.template.md         # mẫu tầng quy ước riêng cho repo bạn
 ```
 
-`SKILL.md` cố tình ngắn. File trong `references/` chỉ được nạp khi diff thật sự chạm tới phần
-đó — không đốt context cho thứ không dùng.
+File trong `references/` chỉ nạp khi diff chạm tới — không đốt context cho thứ không dùng.
+Skill là Markdown thuần, không hook/script/dependency nên không mất tính năng nào khi đổi agent.
 
 ## Tự thêm rule cho repo của bạn
 
-Đây là phần làm skill đáng giá hơn hẳn mặc định. Copy `references/project-rules.template.md`,
-điền bốn mục: bối cảnh rủi ro (merge vào nhánh này thì deploy đi đâu), gate thật sự chạy được
-(kèm những lệnh *trông như chạy được mà không phải*), các lỗi **đã thật sự xảy ra** ở repo,
-và ngữ nghĩa nghiệp vụ dễ hiểu sai.
+Copy `project-rules.template.md`, điền bốn mục: bối cảnh rủi ro, gate thật sự chạy được, các
+lỗi **đã thật sự xảy ra**, ngữ nghĩa nghiệp vụ dễ hiểu sai.
 
-Mỗi lỗi viết theo bốn câu: **đã xảy ra gì** (có ngày/PR/ticket) → **vì sao không ai bắt được**
-→ **dấu hiệu trên diff** (grep cái gì) → **mẫu đúng** (so với file nào trong repo). Thiếu một
-câu thì mục đó sẽ bị đọc lướt qua.
+Mỗi lỗi viết theo bốn câu: **đã xảy ra gì** (ngày/PR/ticket) → **vì sao không ai bắt được** →
+**dấu hiệu trên diff** (grep cái gì) → **mẫu đúng** (so với file nào trong repo).
 
-Đặt file đó trong chính repo của bạn rồi bảo agent nạp cùng skill. Skill luôn ưu tiên
-`CLAUDE.md` / `AGENTS.md` / `.cursor/rules` của repo hơn rule viết sẵn ở đây — **công cụ và
-quy ước của repo luôn thắng**.
+Skill luôn ưu tiên `CLAUDE.md` / `AGENTS.md` / `.cursor/rules` của repo hơn rule viết sẵn ở
+đây — **công cụ và quy ước của repo luôn thắng**.
 
 ## Update
 
 ```sh
-npx skills update            # cập nhật mọi skill đã cài
-npx skills ls                # xem đang cài gì, ở đâu
+npx skills update            # cách 1
 npx skills remove tell-me-im-wrong
 ```
 
-Cài bằng symlink thì `skills update` kéo bản mới về một chỗ, mọi agent cùng thấy.
+Cách 2: chạy lại lệnh `curl`, nó ghi đè. Cách 3: `git pull`. Gỡ thì xoá thư mục
+`tell-me-im-wrong` trong thư mục skills.
 
 ## Đóng góp
 
-Rule mới được nhận khi nó rút ra từ **một lỗi đã thật sự xảy ra**, không phải từ lời khuyên
-chung. PR nên nói rõ: lỗi gì, vì sao gate không bắt được, grep cái gì để phát hiện trên diff.
+Rule mới chỉ nhận khi rút ra từ **một lỗi đã thật sự xảy ra**. PR nói rõ: lỗi gì, vì sao gate
+không bắt được, grep cái gì để phát hiện trên diff.
 
-Hai thứ sẽ bị từ chối: rule chung chung đúng với mọi dự án, và thứ linter/typechecker đã bắt
-được ở repo có cấu hình chúng.
+Bị từ chối: rule chung chung đúng với mọi dự án, và thứ linter/typechecker đã bắt được.
 
-Thêm stack mới: một file trong `references/`, theo cùng khuôn — mục **Gate** ở đầu, rồi từng
-bug class theo dạng *vấn đề → dấu hiệu trên diff → mẫu đúng*. Chỉ viết phần **linter không bắt
-được**; chép lại rule của ESLint vào đây là làm phình vô ích.
+Thêm stack mới: một file trong `references/` — mục **Gate** ở đầu, rồi từng bug class theo dạng
+*vấn đề → dấu hiệu trên diff → mẫu đúng*. Chỉ viết phần linter không bắt được.
 
 ## Giấy phép
 
