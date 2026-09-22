@@ -1,0 +1,2 @@
+# repo này gần như toàn Markdown; ~/.gitignore_global có *.md nên phải phủ định
+!*.md
