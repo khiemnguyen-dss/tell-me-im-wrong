@@ -1,14 +1,14 @@
 # tell-me-im-wrong
 
 Agent skill để AI **nói cho bạn biết code sai chỗ nào** — theo diff của một PR, branch hoặc
-commit range, trong repo thật. Dùng được ở Claude Code, Cursor, Codex, Gemini CLI, OpenCode,
-GitHub Copilot và ~70 agent khác.
+commit range, trong repo thật. Dùng được ở Claude Code, Cursor, Antigravity, Codex, GitHub
+Copilot.
 
 ```sh
-npx skills add khiemnguyen-dss/tell-me-im-wrong
+curl -fsSL https://raw.githubusercontent.com/khiemnguyen-dss/tell-me-im-wrong/main/install.sh | sh
 ```
 
-Không dùng `npx` cũng cài được — xem [Cài](#cài).
+Windows và cách khác: xem [Cài](#cài).
 
 ## Vấn đề
 
@@ -30,61 +30,40 @@ lỗi + đề xuất, và khuyến nghị merge được hay chưa. **Skill khô
 
 ## Cài
 
-### Cách 1 — Skills CLI (khuyến nghị)
-
-Cần **Node.js ≥ 22.20** (`npx` đi kèm Node; kiểm bằng `node -v`). Chưa có thì
-`brew install node` hoặc `nvm install 22`.
+**macOS / Linux** — một lệnh, không cần Node:
 
 ```sh
-npx skills add khiemnguyen-dss/tell-me-im-wrong          # cho project hiện tại
-npx skills add khiemnguyen-dss/tell-me-im-wrong -g       # global
-npx skills add khiemnguyen-dss/tell-me-im-wrong -a claude-code -a cursor
+curl -fsSL https://raw.githubusercontent.com/khiemnguyen-dss/tell-me-im-wrong/main/install.sh | sh
 ```
 
-CLI tự dò agent đang có trên máy, cài bằng symlink nên update một lần là mọi agent cùng nhận.
-
-### Cách 2 — Tải thẳng, không cần Node
+**Windows** — cần Node.js ≥ 22.20:
 
 ```sh
-mkdir -p ~/.claude/skills
-curl -sL https://github.com/khiemnguyen-dss/tell-me-im-wrong/archive/refs/heads/main.tar.gz \
-  | tar -xz -C ~/.claude/skills --strip-components=2 tell-me-im-wrong-main/skills
+npx skills add khiemnguyen-dss/tell-me-im-wrong -g -y -a claude-code cursor antigravity
 ```
 
-Đổi `~/.claude/skills` theo agent bạn dùng:
+Xong thì mở phiên / cửa sổ agent mới để nạp skill.
 
-| Agent | Global | Trong project |
+Script tự dò agent có trên máy rồi cài cho tất cả. Skill nằm một chỗ ở
+`~/.agents/skills/tell-me-im-wrong`, mỗi agent chỉ giữ symlink trỏ về đó:
+
+| Agent | Nhận ra qua | Skill được link vào |
 |---|---|---|
-| Claude Code | `~/.claude/skills/` | `.claude/skills/` |
-| Cursor | `~/.cursor/skills/` | `.agents/skills/` |
-| Codex | `~/.codex/skills/` | `.agents/skills/` |
-| Gemini CLI | `~/.gemini/skills/` | `.agents/skills/` |
-| GitHub Copilot | `~/.copilot/skills/` | `.agents/skills/` |
-| OpenCode | `~/.config/opencode/skills/` | `.agents/skills/` |
-| Windsurf | `~/.codeium/windsurf/skills/` | `.windsurf/skills/` |
+| Claude Code | `~/.claude` | `~/.claude/skills/` |
+| Cursor | `~/.cursor` | `~/.cursor/skills/` |
+| Antigravity | `~/.gemini/antigravity` | `~/.gemini/antigravity/skills/` |
+| Codex | `~/.codex` | `~/.codex/skills/` |
+| GitHub Copilot | `~/.copilot` | `~/.copilot/skills/` |
 
-Agent khác: [bảng đầy đủ](https://github.com/vercel-labs/skills#supported-agents).
-
-### Cách 3 — Clone, update bằng `git pull`
+Chỉ cài cho vài agent, kể cả agent chưa dò thấy: thêm tên sau `sh -s --`.
 
 ```sh
-git clone https://github.com/khiemnguyen-dss/tell-me-im-wrong.git ~/src/tell-me-im-wrong
-ln -s ~/src/tell-me-im-wrong/skills/tell-me-im-wrong ~/.claude/skills/tell-me-im-wrong
+curl -fsSL https://raw.githubusercontent.com/khiemnguyen-dss/tell-me-im-wrong/main/install.sh | sh -s -- cursor antigravity
 ```
 
-Hợp với ai muốn tự sửa rule mà vẫn `git pull` được.
-
-### Cách 4 — Bảo agent tự cài
-
-```
-Cài skill từ https://github.com/khiemnguyen-dss/tell-me-im-wrong vào ~/.claude/skills,
-giữ nguyên tên thư mục tell-me-im-wrong.
-```
-
-### Kiểm tra
-
-`ls ~/.claude/skills/tell-me-im-wrong/SKILL.md` (cách 2–4) hoặc `npx skills ls` (cách 1).
-Claude Code cần mở phiên mới mới thấy skill vừa cài.
+Agent khác hoặc cài riêng cho một project: dùng
+[Skills CLI](https://github.com/vercel-labs/skills#supported-agents) —
+`npx skills add khiemnguyen-dss/tell-me-im-wrong`.
 
 ## Dùng
 
@@ -100,6 +79,7 @@ trả lời ba câu — cũ nào đã fix, cũ nào chưa, có gì mới.
 ## Trong repo có gì
 
 ```
+install.sh                                # cài/gỡ cho mọi agent dò thấy trên máy
 skills/tell-me-im-wrong/
 ├── SKILL.md                              # quy trình 8 bước — file agent thực sự đọc
 └── references/
@@ -124,15 +104,15 @@ Mỗi lỗi viết theo bốn câu: **đã xảy ra gì** (ngày/PR/ticket) → 
 Skill luôn ưu tiên `CLAUDE.md` / `AGENTS.md` / `.cursor/rules` của repo hơn rule viết sẵn ở
 đây — **công cụ và quy ước của repo luôn thắng**.
 
-## Update
+## Update / gỡ
+
+Update: chạy lại đúng lệnh cài. Gỡ khỏi mọi agent:
 
 ```sh
-npx skills update            # cách 1
-npx skills remove tell-me-im-wrong
+curl -fsSL https://raw.githubusercontent.com/khiemnguyen-dss/tell-me-im-wrong/main/install.sh | sh -s -- --remove
 ```
 
-Cách 2: chạy lại lệnh `curl`, nó ghi đè. Cách 3: `git pull`. Gỡ thì xoá thư mục
-`tell-me-im-wrong` trong thư mục skills.
+Cài bằng `npx` thì dùng `npx skills update` / `npx skills remove tell-me-im-wrong`.
 
 ## Đóng góp
 
