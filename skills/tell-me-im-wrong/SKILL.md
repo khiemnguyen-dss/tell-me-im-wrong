@@ -1,6 +1,6 @@
 ---
 name: tell-me-im-wrong
-description: Review code theo diff của 1 PR/branch/commit range trong repo thật. Chạy đúng gate sẵn có của repo (lint/typecheck/test/build), nạp quy ước của chính repo (CLAUDE.md, AGENTS.md, .cursor/rules) và file quy ước dự án nếu có, review theo 7 lens độc lập, chấm confidence từng finding rồi bỏ hết phần dưới ngưỡng, cuối cùng xuất báo cáo Markdown kèm file:dòng, mức độ và đề xuất. Dùng khi người dùng nói "review code", "review PR", "self review", "check giúp PR này", "xem trước khi merge", "soi giúp chỗ này sai gì". Không tự sửa code trừ khi được yêu cầu.
+description: Review code theo diff của 1 PR/branch/commit range trong repo thật. Chạy đúng gate sẵn có của repo (lint/typecheck/test/build), nạp quy ước của chính repo (CLAUDE.md, AGENTS.md, .cursor/rules) và file quy ước dự án nếu có, review theo 7 lens độc lập, chấm confidence từng finding rồi bỏ hết phần dưới ngưỡng, cuối cùng xuất báo cáo Markdown kèm file:dòng, mức độ và đề xuất. Dùng khi người dùng nói "review code", "review PR", "self review", "check giúp PR này", "xem trước khi merge", "soi giúp chỗ này sai gì". Cũng dùng khi được gọi từ hook pre-commit ("chế độ pre-commit"), hoặc khi người dùng muốn lắp gate eslint + husky + Claude review vào repo. Không tự sửa code trừ khi được yêu cầu.
 ---
 
 # Tell Me I'm Wrong
@@ -39,10 +39,25 @@ phần máy lẽ ra làm — soi kỹ hơn, và nói rõ điều đó trong báo
 | `references/react-ts.md` | diff chạm React / TypeScript |
 | `references/forge-and-ads.md` | diff chạm app Atlassian Forge hoặc `@atlaskit/*` |
 | `references/project-rules.template.md` | mẫu để tự viết tầng quy ước riêng cho repo của bạn |
+| `references/pre-commit.md` | được gọi ở chế độ pre-commit, hoặc người dùng muốn lắp gate vào repo |
 
 Đọc thêm `CLAUDE.md` / `AGENTS.md` / `.cursor/rules/*` / `CONTRIBUTING.md` trong repo — kể cả
 `CLAUDE.md` nằm trong các thư mục mà PR đụng tới. **Tài liệu trong repo thắng rule viết sẵn ở
 đây.** Repo có file quy ước riêng dựng theo `project-rules.template.md` thì nạp luôn.
+
+## Chế độ pre-commit
+
+Prompt nói "chế độ pre-commit" nghĩa là đang chạy trong hook `git commit`, không có người để
+hỏi lại. Stdin chứa bảng kết quả gate vừa chạy và diff đã staged. Khác với review thường:
+
+- **Bỏ Bước 1–3.** Phạm vi là diff trong stdin. Gate đã chạy — tin bảng kết quả: gate PASS
+  thì không báo lại lớp lỗi nó phủ, gate SKIP thì soi kỹ lớp lỗi đó.
+- **Bước 4–6 giữ nguyên** nhưng chỉ đọc rộng tới file trong diff và chỗ gọi trực tiếp của
+  hàm bị sửa — dev đang chờ commit.
+- **Không ghi file báo cáo.** Trả đúng JSON theo schema được giao; `verdict` = `block` nếu có
+  Blocker, `warn` nếu có Major, còn lại `pass`.
+
+Lắp hook vào repo: xem `references/pre-commit.md`.
 
 ## Bước 0 — Đọc được repo chưa
 

@@ -1,6 +1,8 @@
 #!/bin/sh
 # curl -fsSL https://raw.githubusercontent.com/khiemnguyen-dss/tell-me-im-wrong/main/install.sh | sh
 #   ... | sh -s -- cursor antigravity   chỉ cài cho agent được nêu tên
+#   ... | sh -s -- --hooks              lắp luôn gate pre-commit vào repo đang đứng, không hỏi
+#   ... | sh -s -- --no-hooks           không lắp gate
 #   ... | sh -s -- --remove             gỡ khỏi mọi agent
 set -eu
 
@@ -18,10 +20,13 @@ codex|Codex|$CODEX_HOME|$CODEX_HOME/skills
 copilot|GitHub Copilot|$HOME/.copilot|$HOME/.copilot/skills"
 
 remove=0
+hooks=ask
 wanted=""
 for arg in "$@"; do
   case "$arg" in
     --remove) remove=1 ;;
+    --hooks) hooks=yes ;;
+    --no-hooks) hooks=no ;;
     *) wanted="$wanted $arg" ;;
   esac
 done
@@ -60,10 +65,29 @@ EOF
 if [ "$remove" = 1 ]; then
   rm -rf "${STORE:?}/$NAME"
   echo "Đã gỡ $NAME."
+  exit 0
 elif [ "$count" = 0 ]; then
   echo "Không thấy agent nào (claude, cursor, antigravity, codex, copilot)."
   echo "Chỉ định tay: curl -fsSL .../install.sh | sh -s -- claude cursor"
   exit 1
-else
-  echo "Xong. Mở phiên/cửa sổ agent mới để nạp skill."
 fi
+
+setup="$STORE/$NAME/pre-commit/setup.sh"
+root=$(git rev-parse --show-toplevel 2>/dev/null || true)
+if [ "$hooks" != no ] && [ -n "$root" ] && [ -f "$root/package.json" ]; then
+  ans=""
+  if [ "$hooks" = yes ]; then
+    ans=y
+  else
+    printf "Lắp gate pre-commit (eslint + husky + Claude review) vào %s? [y/N] " "$root"
+    { read -r ans < /dev/tty; } 2>/dev/null || echo
+  fi
+  case "$ans" in
+    y|Y|yes) sh "$setup" ;;
+    *) echo "Lắp sau, chạy trong repo: sh $setup" ;;
+  esac
+elif [ "$hooks" = yes ]; then
+  echo "Không đứng trong repo có package.json — bỏ qua gate. Lắp sau: sh $setup"
+fi
+
+echo "Xong. Mở phiên/cửa sổ agent mới để nạp skill."

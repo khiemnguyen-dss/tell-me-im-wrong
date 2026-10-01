@@ -1,0 +1,5 @@
+# tell-me-im-wrong: eslint → prettier → tsc → Claude review, trên đúng nội dung đã staged
+gitdir=$(git rev-parse --git-dir)
+rm -f "$gitdir/tmiw-gates" "$gitdir/tmiw-review.txt"
+lint-staged --concurrent false
+cat "$gitdir/tmiw-review.txt" 2>/dev/null || true

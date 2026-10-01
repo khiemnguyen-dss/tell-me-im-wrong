@@ -42,7 +42,9 @@ curl -fsSL https://raw.githubusercontent.com/khiemnguyen-dss/tell-me-im-wrong/ma
 npx skills add khiemnguyen-dss/tell-me-im-wrong -g -y -a claude-code cursor antigravity
 ```
 
-Xong thì mở phiên / cửa sổ agent mới để nạp skill.
+Chạy lệnh trong một repo JS/TS thì script hỏi thêm có lắp [gate pre-commit](#gác-tại-git-commit)
+không (`--hooks` để lắp luôn không hỏi, `--no-hooks` để bỏ qua). Xong thì mở phiên / cửa sổ
+agent mới để nạp skill.
 
 Script tự dò agent có trên máy rồi cài cho tất cả. Skill nằm một chỗ ở
 `~/.agents/skills/tell-me-im-wrong`, mỗi agent chỉ giữ symlink trỏ về đó:
@@ -76,22 +78,55 @@ review giúp diff giữa develop và HEAD
 Báo cáo viết bằng **ngôn ngữ bạn đang nói chuyện**. Chạy lần 2: đưa lại báo cáo cũ, skill chỉ
 trả lời ba câu — cũ nào đã fix, cũ nào chưa, có gì mới.
 
+## Gác tại `git commit`
+
+Ba lớp chạy nối tiếp ở máy dev, lớp sau chỉ chạy khi lớp trước pass:
+
+| Lớp | Bắt cái gì | Thời gian |
+|---|---|---|
+| eslint (+ prettier nếu repo có config) | biến/import thừa, hook deps, format | < 5 giây |
+| tsc | sai kiểu, thiếu field, null | 5–20 giây |
+| Claude Code (`claude -p` + skill này) | logic, phân quyền, ngữ cảnh rộng hơn diff | ~30 giây |
+
+Cộng `commitlint` nếu repo đã dùng Conventional Commits. Claude dùng phiên đăng nhập sẵn có
+trên máy — không cần API key, không cần secret trên CI.
+
+Lắp vào repo đã cài skill rồi (Windows chạy trong Git Bash):
+
+```sh
+sh ~/.agents/skills/tell-me-im-wrong/pre-commit/setup.sh
+```
+
+- **Không ghi đè config sẵn có** — chỉ tạo eslint/lint-staged/commitlint config còn thiếu.
+- **Chỉ lint file đang staged** — bật được trên codebase cũ mà không phải sửa hết một lần.
+- **Claude không làm kẹt commit**: thiếu `claude`, chưa cài skill, diff > 800 dòng, lỗi mạng
+  ⇒ bỏ qua lớp này. Bỏ qua chủ động: `SKIP_AI_REVIEW=1 git commit …`.
+- **Mặc định `MODE=warn`** — in finding, không chặn. Khi tỉ lệ nhiễu đủ thấp thì đổi
+  `MODE=block` ở đầu `.husky/tmiw/claude-review.sh`, lúc đó chỉ Blocker mới chặn.
+
+Chi tiết và lý do từng quyết định: [`references/pre-commit.md`](skills/tell-me-im-wrong/references/pre-commit.md).
+
 ## Trong repo có gì
 
 ```
 install.sh                                # cài/gỡ cho mọi agent dò thấy trên máy
 skills/tell-me-im-wrong/
 ├── SKILL.md                              # quy trình 8 bước — file agent thực sự đọc
-└── references/
-    ├── review-passes.md                  # 7 lens + thang confidence + danh sách false positive
-    ├── severity-and-report.md            # mức độ, định dạng báo cáo, comment lên PR
-    ├── react-ts.md                       # React/TS — phần linter không bắt được
-    ├── forge-and-ads.md                  # Atlassian Forge + Design System
-    └── project-rules.template.md         # mẫu tầng quy ước riêng cho repo bạn
+├── references/
+│   ├── review-passes.md                  # 7 lens + thang confidence + danh sách false positive
+│   ├── severity-and-report.md            # mức độ, định dạng báo cáo, comment lên PR
+│   ├── react-ts.md                       # React/TS — phần linter không bắt được
+│   ├── forge-and-ads.md                  # Atlassian Forge + Design System
+│   ├── pre-commit.md                     # gate tại git commit: cách chạy, lý do thiết kế
+│   └── project-rules.template.md         # mẫu tầng quy ước riêng cho repo bạn
+└── pre-commit/
+    ├── setup.sh                          # lắp husky + lint-staged + eslint + commitlint vào repo
+    └── templates/                        # hook và script được copy vào .husky/
 ```
 
 File trong `references/` chỉ nạp khi diff chạm tới — không đốt context cho thứ không dùng.
-Skill là Markdown thuần, không hook/script/dependency nên không mất tính năng nào khi đổi agent.
+Phần review là Markdown thuần nên dùng được ở mọi agent; riêng `pre-commit/` cần Node và
+Claude Code.
 
 ## Tự thêm rule cho repo của bạn
 
